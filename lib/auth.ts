@@ -1,4 +1,5 @@
-import type { NextAuthOptions } from "next-auth";
+import type { NextAuthOptions, Account, Session } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import Spotify from "next-auth/providers/spotify";
 
 type ExtendedToken = {
@@ -81,7 +82,7 @@ export const authOptions: NextAuthOptions = {
     },
     debug: process.env.NODE_ENV === "development",
     callbacks: {
-        async jwt({ token, account, profile }: any) {
+        async jwt({ token, account }: { token: JWT; account: Account | null }) {
             let working = token as ExtendedToken;
 
             // Initial sign in
@@ -104,13 +105,20 @@ export const authOptions: NextAuthOptions = {
             // Refresh access token
             return await refreshSpotifyAccessToken(working);
         },
-        async session({ session, token }: any) {
+        async session({ session, token }: { session: Session; token: JWT }) {
             // Expose access token to server-side session (not sent to browser)
-            session.user = session.user ?? {} as any;
-            (session.user as any).id = (token as any).sub;
-            (session as any).accessToken = token.accessToken;
-            (session as any).error = token.error;
-            return session;
+            const extendedToken = token as ExtendedToken;
+            type ExtendedSession = Session & { accessToken?: string; error?: string };
+            const extendedSession = session as ExtendedSession;
+
+            extendedSession.user = extendedSession.user ?? {};
+            if (extendedSession.user) {
+                (extendedSession.user as { id?: string }).id = extendedToken.sub;
+            }
+            extendedSession.accessToken = extendedToken.accessToken;
+            extendedSession.error = extendedToken.error;
+
+            return extendedSession;
         },
     },
     // Ensure we have a secret for JWT
