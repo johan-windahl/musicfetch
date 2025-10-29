@@ -47,7 +47,7 @@ export default async function Home() {
   return (
     <div className="mx-auto max-w-6xl p-6">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Your Spotify Playlists</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Your Spotify Playlists!!!</h1>
         <LoginButton signedIn={true} />
       </div>
       {error ? (
