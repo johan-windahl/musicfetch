@@ -5,6 +5,7 @@ import { useState } from "react";
 
 export default function LoginButton({ signedIn }: { signedIn: boolean }) {
     const [loading, setLoading] = useState(false);
+
     return (
         <button
             onClick={async () => {

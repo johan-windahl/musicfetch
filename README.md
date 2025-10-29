@@ -43,6 +43,9 @@ Create a `.env.local` file in the project root with the following variables:
 SPOTIFY_CLIENT_ID=your_spotify_client_id
 SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
 # Set to your local or deployed URL (no trailing slash)
 NEXTAUTH_URL=http://localhost:3000
 
@@ -57,6 +60,17 @@ NEXTAUTH_SECRET=your_nextauth_secret
 - Copy the Client ID and Client Secret into `.env.local`
 - Required scopes: `playlist-read-private playlist-read-collaborative user-read-email`
 
+### Google/YouTube App Setup
+
+- Create a Google Cloud project at `https://console.cloud.google.com/`
+- Enable the YouTube Data API v3
+- Create OAuth 2.0 credentials
+- Add these Authorized redirect URIs:
+  - `http://localhost:3000/api/youtube/callback`
+  - `http://127.0.0.1:3000/api/youtube/callback`
+- Copy the Client ID and Client Secret into `.env.local`
+- Required scopes: YouTube API access for playlist creation and management
+
 ### Install Dependencies
 
 Add NextAuth to the project:
@@ -67,10 +81,18 @@ npm install next-auth
 
 If you use a different package manager, install the equivalent dependency.
 
-## Future: YouTube Export (Outline)
+## YouTube Music Export
 
-- OAuth Provider: Google (Auth scopes: `youtube`, `youtube.upload`)
-- Flow: user signs in with Google → create playlist → search each Spotify track on YouTube Music/YouTube → add best match
-- Matching: prefer official audio; fallback to top search result by title + artist; use ISRC when available
-- Error handling: collect misses and duplicates; show a summary after export
-- Quotas: ensure project has sufficient YouTube Data API v3 quota; implement exponential backoff on 429
+The application now supports exporting Spotify playlists to YouTube Music:
+
+- Sign in with both Spotify and Google accounts
+- Select playlists you want to export
+- Click "Create in YouTube Music" button
+- The app will:
+  1. Fetch all tracks from selected Spotify playlists
+  2. Create corresponding playlists in YouTube Music
+  3. Search for matching videos on YouTube (using ISRC when available)
+  4. Add found videos to the new playlists
+  5. Display a summary of successful and failed track imports
+
+**Note**: YouTube Data API has quota limits. Large playlists may take time to export.

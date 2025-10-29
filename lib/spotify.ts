@@ -7,6 +7,14 @@ export type SpotifyPlaylist = {
     spotifyUrl: string;
 };
 
+export type SpotifyTrack = {
+    name: string;
+    artists: string[];
+    album: string;
+    isrc?: string;
+    spotifyUrl: string;
+};
+
 type SpotifyApiError = Error & { status?: number; retryAfter?: number };
 
 type SpotifyPlaylistResponse = {
@@ -67,6 +75,70 @@ export async function fetchUserPlaylists(options: {
     }));
 
     return { items, total: data.total, limit: data.limit, offset: data.offset };
+}
+
+type SpotifyPlaylistTracksResponse = {
+    items: Array<{
+        track: {
+            name: string;
+            artists: Array<{ name: string }>;
+            album: { name: string };
+            external_ids?: { isrc?: string };
+            external_urls: { spotify: string };
+        } | null;
+    }>;
+    next: string | null;
+};
+
+export async function fetchPlaylistTracks(options: {
+    accessToken: string;
+    playlistId: string;
+}): Promise<SpotifyTrack[]> {
+    const { accessToken, playlistId } = options;
+    const tracks: SpotifyTrack[] = [];
+    let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
+
+    while (nextUrl) {
+        const res = await fetch(nextUrl, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+            cache: "no-store",
+        });
+
+        if (res.status === 429) {
+            const retryAfter = res.headers.get("retry-after") || "1";
+            const err: SpotifyApiError = new Error(`Rate limited by Spotify. Retry after ${retryAfter}s`);
+            err.status = 429;
+            err.retryAfter = Number(retryAfter);
+            throw err;
+        }
+
+        if (!res.ok) {
+            const text = await res.text();
+            const err: SpotifyApiError = new Error(`Spotify API error ${res.status}: ${text}`);
+            err.status = res.status;
+            throw err;
+        }
+
+        const data = (await res.json()) as SpotifyPlaylistTracksResponse;
+
+        for (const item of data.items) {
+            if (item.track) {
+                tracks.push({
+                    name: item.track.name,
+                    artists: item.track.artists.map((a) => a.name),
+                    album: item.track.album.name,
+                    isrc: item.track.external_ids?.isrc,
+                    spotifyUrl: item.track.external_urls.spotify,
+                });
+            }
+        }
+
+        nextUrl = data.next;
+    }
+
+    return tracks;
 }
 
 

@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import LoginButton from "@/components/LoginButton";
+import YouTubeConnectButton from "@/components/YouTubeConnectButton";
 import PlaylistGrid from "@/components/PlaylistGrid";
 import { fetchUserPlaylists, type SpotifyPlaylist } from "@/lib/spotify";
 
@@ -24,9 +25,11 @@ export default async function Home() {
 
   let error: string | null = null;
   let playlists: SpotifyPlaylist[] = [];
+  let needsSpotifyAuth = false;
 
   if (!accessToken) {
-    error = "No access token found. Please sign in again.";
+    needsSpotifyAuth = true;
+    error = "Please sign in with Spotify to view your playlists.";
   } else {
     try {
       const data = await fetchUserPlaylists({ accessToken });
@@ -47,10 +50,18 @@ export default async function Home() {
   return (
     <div className="mx-auto max-w-6xl p-6">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Your Spotify Playlists!!!</h1>
-        <LoginButton signedIn={true} />
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Your Spotify Playlists</h1>
+        <div className="flex gap-2">
+          {accessToken && <YouTubeConnectButton />}
+          <LoginButton signedIn={true} />
+        </div>
       </div>
-      {error ? (
+      {error && needsSpotifyAuth ? (
+        <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4 text-yellow-800 dark:border-yellow-900/50 dark:bg-yellow-950 dark:text-yellow-200">
+          <p className="mb-3">{error}</p>
+          <LoginButton signedIn={false} />
+        </div>
+      ) : error ? (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-900/50 dark:bg-red-950 dark:text-red-200">
           {error}
         </div>
