@@ -34,3 +34,43 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Environment Variables
+
+Create a `.env.local` file in the project root with the following variables:
+
+```
+SPOTIFY_CLIENT_ID=your_spotify_client_id
+SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+
+# Set to your local or deployed URL (no trailing slash)
+NEXTAUTH_URL=http://localhost:3000
+
+# Generate a strong random secret (e.g. `openssl rand -base64 32`)
+NEXTAUTH_SECRET=your_nextauth_secret
+```
+
+### Spotify App Setup
+
+- Create a Spotify Developer app at `https://developer.spotify.com/dashboard`
+- Add a Redirect URI: `http://localhost:3000/api/auth/callback/spotify`
+- Copy the Client ID and Client Secret into `.env.local`
+- Required scopes: `playlist-read-private playlist-read-collaborative user-read-email`
+
+### Install Dependencies
+
+Add NextAuth to the project:
+
+```bash
+npm install next-auth
+```
+
+If you use a different package manager, install the equivalent dependency.
+
+## Future: YouTube Export (Outline)
+
+- OAuth Provider: Google (Auth scopes: `youtube`, `youtube.upload`)
+- Flow: user signs in with Google → create playlist → search each Spotify track on YouTube Music/YouTube → add best match
+- Matching: prefer official audio; fallback to top search result by title + artist; use ISRC when available
+- Error handling: collect misses and duplicates; show a summary after export
+- Quotas: ensure project has sufficient YouTube Data API v3 quota; implement exponential backoff on 429

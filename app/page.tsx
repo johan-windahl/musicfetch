@@ -1,65 +1,62 @@
-import Image from "next/image";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import LoginButton from "@/components/LoginButton";
+import PlaylistGrid from "@/components/PlaylistGrid";
+import { fetchUserPlaylists, type SpotifyPlaylist } from "@/lib/spotify";
 
-export default function Home() {
+export default async function Home() {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+        <div className="text-center">
+          <h1 className="mb-6 text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Spotify Playlists Viewer</h1>
+          <LoginButton signedIn={false} />
+        </div>
+      </div>
+    );
+  }
+
+  // Get access token from session
+  type ExtendedSession = typeof session & { accessToken?: string };
+  const accessToken = (session as ExtendedSession).accessToken;
+
+  let error: string | null = null;
+  let playlists: SpotifyPlaylist[] = [];
+
+  if (!accessToken) {
+    error = "No access token found. Please sign in again.";
+  } else {
+    try {
+      const data = await fetchUserPlaylists({ accessToken });
+      playlists = data.items;
+    } catch (err: unknown) {
+      const apiError = err as { status?: number; retryAfter?: number; message?: string };
+      if (apiError?.status === 429) {
+        const retryAfter = apiError?.retryAfter ?? 1;
+        error = `Rate limited by Spotify. Please try again in ${retryAfter}s.`;
+      } else if (apiError?.status === 401) {
+        error = "Your session has expired. Please sign in again.";
+      } else {
+        error = `Failed to load playlists: ${apiError?.message || "Unknown error"}`;
+      }
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="mx-auto max-w-6xl p-6">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Your Spotify Playlists</h1>
+        <LoginButton signedIn={true} />
+      </div>
+      {error ? (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-900/50 dark:bg-red-950 dark:text-red-200">
+          {error}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      ) : (
+        <PlaylistGrid playlists={playlists} />
+      )}
     </div>
   );
 }
